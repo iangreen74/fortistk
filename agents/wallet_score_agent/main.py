@@ -1,9 +1,14 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import Dict
-from base_agent.base import BaseAgent
 
 app = FastAPI()
+
+class BaseAgent:
+    def analyze(self, input_data: dict) -> dict:
+        raise NotImplementedError
+    def health(self) -> dict:
+        return {"status": "ok", "agent": "wallet_score_agent"}
 
 class WalletInput(BaseModel):
     address: str
