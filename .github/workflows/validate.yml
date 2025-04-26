@@ -1,0 +1,44 @@
+name: PR Validator
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  python-lint:
+    name: Python Lint Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+      - name: Install Ruff
+        run: pip install ruff
+      - name: Run Ruff Linter
+        run: ruff ./agents ./backend ./cli ./ai
+
+  terraform-validate:
+    name: Terraform Format & Validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./infra/envs/dev
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+      - name: Init
+        run: terraform init -backend=false
+      - name: Validate
+        run: terraform validate
+
+  docker-build-wallet-score-agent:
+    name: Docker Build Agent Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build wallet_score_agent container
+        run: docker build -t wallet-score-agent ./agents/wallet_score_agent
