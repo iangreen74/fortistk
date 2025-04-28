@@ -10,7 +10,7 @@ echo "🔐 Authenticating with ECR..."
 aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin "$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com"
 
 echo "🐳 Building Docker image..."
-docker build -t $REPO ./agents/$REPO
+docker build -t $REPO ./agents/wallet_score_agent
 
 echo "🏷 Tagging image for ECR..."
 docker tag $REPO:latest "$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$REPO:latest"
