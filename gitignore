@@ -1,0 +1,34 @@
+# Terraform
+
+.terraform/
+_.tfstate
+_.tfstate.\*
+
+# Python
+
+**pycache**/
+_.pyc
+_.pyo
+_.pyd
+_.env
+.env
+
+# Node
+
+node_modules/
+
+# Build
+
+dist/
+build/
+\*.egg-info/
+
+# Logs
+
+\*.log
+
+# Misc
+
+_.DS_Store
+_.bak
+\*.tmp
