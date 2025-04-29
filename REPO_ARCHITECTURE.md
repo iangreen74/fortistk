@@ -1,92 +1,110 @@
 # FortiSTK Repository Architecture
 
-## 🌐 Vision
+FortiSTK is an open, modular research platform designed to explore the frontiers of distributed AI security for decentralized finance (DeFi) ecosystems.
 
-FortiSTK is a **modular, self-replicating security mesh for Web3 gambling fraud detection**, powered by distributed AI agents and designed with antifragility and automation at its core. The system is engineered to evolve, scale, and defend autonomously.
+The repository is organized to support:
 
-## ✅ Core Engineering Principles
+- Distributed intelligent agent development.
+- Modular AI and machine learning workflows.
+- Systematic experiment tracking.
+- Scalable model training and deployment.
+- Cutting-edge antifragile system design.
 
-- **Swarm Intelligence**: Each agent is an autonomous AI unit that can analyze, score, and report independently, yet operate in coordination.
-- **Antifragile Infrastructure**: Errors are logged, services restart automatically, monitoring is built-in. Stress improves the system.
-- **Immutable Region**: All infrastructure is permanently deployed to `us-east-1`. This does not change.
-- **Automation-First**: Single-developer optimized. GitHub Actions, Makefiles, and scripts power CI/CD and replication.
-- **Open Core**: Public GitHub repo with core system exposed, premium swarm coordinator logic gated.
+---
 
-## 🧱 Repo Layout
+## Root Structure
 
-```text
-fortistk/
-├── README.md                    # Project overview
-├── REPO_ARCHITECTURE.md        # This document
-├── infra/                      # All Terraform infrastructure
-│   ├── envs/                   # Environment-specific deployments (dev, prod)
-│   │   └── dev/
-│   │       ├── main.tf
-│   │       ├── variables.tf
-│   │       ├── terraform.tfvars
-│   │       └── backend.tf
-│   ├── modules/                # Reusable infra modules
-│   │   ├── vpc/
-│   │   ├── ecs_cluster/
-│   │   ├── agent_runtime/
-│   │   ├── agent_gateway/
-│   │   ├── swarm_scaler/
-│   │   └── monitoring/
-│   └── scripts/                # Deployment helpers
-│       └── deploy.sh
-├── agents/                     # AI swarm agents
-│   ├── base_agent/             # Abstract interface
-│   ├── wallet_score_agent/     # Example agent (deployed first)
-│   ├── gambling_detector/
-│   └── tx_graph_agent/
-├── backend/                    # Control node FastAPI service
-│   └── fastapi_service/
-│       ├── main.py
-│       ├── requirements.txt
-│       └── api/
-│           ├── routes.py
-│           └── schemas.py
-├── cli/                        # CLI tools
-│   └── analyze_wallet.py
-├── data/                       # Data schemas, examples, training sets
-│   ├── schemas/
-│   ├── examples/
-│   └── training_data/
-├── ai/                         # ML models and utilities
-│   ├── models/
-│   │   ├── gambling_risk_model/
-│   │   └── tx_graph_model/
-│   └── utils/
-│       └── feature_extraction.py
-├── scripts/                    # Automation + agent scaffolding
-│   ├── run_all_agents.sh
-│   ├── bootstrap_agent.sh
-│   └── make_agent.py
-└── .github/
-    └── workflows/
-        └── deploy.yml
-```
+| Directory      | Purpose                                                                             |
+| :------------- | :---------------------------------------------------------------------------------- |
+| `agents/`      | Core AI security agents, each modular and independently deployable.                 |
+| `ai/`          | Core AI logic including agent intelligence, utilities, datasets, and MLOps tooling. |
+| `models/`      | Saved and versioned trained models for live agent use.                              |
+| `training/`    | Training pipelines, scripts, and hyperparameter configs.                            |
+| `experiments/` | Research experiments, notebooks, and tracking outputs.                              |
+| `artifacts/`   | Saved agent experiences, transaction replays, logs, and other critical artifacts.   |
+| `backend/`     | FastAPI backend service coordinating agent communication and external API exposure. |
+| `cli/`         | Command-line interface tools for agent orchestration, monitoring, and management.   |
+| `infra/`       | Terraform infrastructure modules for scalable deployment.                           |
+| `scripts/`     | Bootstrap and automation scripts.                                                   |
+| `docs/`        | Technical documentation, mathematical models, and formal research notes.            |
 
-## 🛠 Change Rules
+---
 
-- All changes to infra or AI logic must align with swarm-agent modularity.
-- No direct region references outside of `terraform.tfvars` or protected `backend.tf`.
-- New agents must implement the `BaseAgent` interface.
-- All modules must be testable and independently deployable.
+## Key Subsystems
 
-## 🔐 Public vs Private
+### 1. Agents (`/agents/`)
 
-This repo is public, showing the core system and agent architecture. The swarm coordination logic may be commercialized or gated via SaaS licensing.
+- `base_agent/` — Defines core abstract base classes for FortiSTK agents.
+- `wallet_score_agent/` — Initial agent focused on wallet risk profiling.
+- `tx_analyzer_agent/` — (Prototype) Agent for transaction anomaly detection.
+- `threat_hunter_agent/` — (Prototype) Agent for emergent threat pattern discovery.
 
-## 🧠 Deployment Lifecycle
+Agents operate independently, sharing learned intelligence via decentralized protocols.
 
-- Run `init_repo_structure.sh` to scaffold
-- Use `deploy.sh dev` to provision core infra
-- Use `make_agent.py` to scaffold and deploy new agents
-- CI/CD triggers automatic formatting, plan checks, deploy gates
+### 2. AI Core (`/ai/`)
 
-## 🚧 Future Enhancements
+- `core/` — Intelligence modules (agent brains, memory systems, policy optimizers).
+- `utils/` — Support libraries for feature extraction, graph analysis, and data preprocessing.
+- `mlops/` — Lightweight tooling for model tracking, dataset versioning, and experiment management.
+- `datasets/` — Scripts and tooling to generate synthetic and real-world training data.
 
-- Agent discovery via decentralized DNS
-- On-chain intelligence feedback loop
-- Agent reputation system for consensus-based fraud detection
+### 3. Models (`/models/`)
+
+- Pretrained model artifacts (e.g., Wallet Risk Model v1, Fraud Transaction Model v1).
+- Models are versioned and used by agents for live inference.
+
+### 4. Training Pipelines (`/training/`)
+
+- Scripts and configurations to train AI models from scratch or fine-tune existing models.
+- Designed to allow fast iterations and reproducibility.
+
+### 5. Experiments (`/experiments/`)
+
+- Research notebooks, experimental results, and analysis.
+- Organized for easy reproducibility and peer review.
+
+### 6. Backend (`/backend/`)
+
+- FastAPI-based service layer.
+- Exposes APIs for agent coordination, user interaction, and monitoring.
+
+### 7. CLI Tools (`/cli/`)
+
+- Unified CLI tools for local testing, agent orchestration, and system administration.
+
+### 8. Infrastructure (`/infra/`)
+
+- Terraform scripts and modules for scalable cloud deployment (AWS-focused).
+- Includes VPC, ECS, ECR, ALB, and monitoring setup.
+
+### 9. Artifacts (`/artifacts/`)
+
+- Agent-generated outputs, replayed transaction histories, logs, and model artifacts.
+
+### 10. Documentation (`/docs/`)
+
+- Formal technical documentation.
+- Research papers, architecture blueprints, and mathematical formulations.
+
+---
+
+## Design Principles
+
+- **Modularity** — Every component (agent, model, dataset) is loosely coupled and independently upgradeable.
+- **Scalability** — Designed for cloud-native, distributed deployment.
+- **Experimentation First** — Optimized for rapid hypothesis testing, research iteration, and learning.
+- **Antifragility** — Systems designed to strengthen under attack.
+- **Transparency** — Models, agent policies, and experiments are tracked and reproducible.
+
+---
+
+## Future Directions
+
+- Expansion of agent types (fraud hunter, liquidity manipulator detector, governance manipulator monitor).
+- Full agent-to-agent secure communication protocols.
+- Integration of reinforcement learning for autonomous policy improvement.
+- Swarm intelligence-based distributed threat response networks.
+
+---
+
+**FortiSTK — Building the future immune system of decentralized finance.**
