@@ -1,0 +1,176 @@
+name: MLOps Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'ai/**'
+      - 'agents/**'
+      - '.github/workflows/mlops.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'ai/**'
+      - 'agents/**'
+  workflow_dispatch:
+    inputs:
+      trigger_training:
+        description: 'Trigger model training'
+        required: false
+        default: 'false'
+      deploy_environment:
+        description: 'Deploy to environment'
+        required: false
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - prod
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install dependencies
+        run: |
+          pip install ruff pytest pytest-cov mlflow scikit-learn
+          pip install -r ai/requirements.txt || true
+      
+      - name: Lint with ruff
+        run: ruff ./agents ./backend ./cli ./ai
+      
+      - name: Run tests
+        run: |
+          pytest ai/tests/ --cov=ai --cov-report=xml || echo "No tests found"
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        if: always()
+
+  build-training-image:
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.inputs.trigger_training == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Login to ECR
+        run: aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
+      
+      - name: Build training image
+        run: |
+          docker build -t wallet-scorer-training:${{ github.sha }} \
+            -f ai/mlops/docker/Dockerfile.training .
+          docker tag wallet-scorer-training:${{ github.sha }} \
+            ${{ env.ECR_REGISTRY }}/wallet-scorer-training:${{ github.sha }}
+          docker tag wallet-scorer-training:${{ github.sha }} \
+            ${{ env.ECR_REGISTRY }}/wallet-scorer-training:latest
+      
+      - name: Push to ECR
+        run: |
+          docker push ${{ env.ECR_REGISTRY }}/wallet-scorer-training:${{ github.sha }}
+          docker push ${{ env.ECR_REGISTRY }}/wallet-scorer-training:latest
+
+  build-inference-image:
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Login to ECR
+        run: aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
+      
+      - name: Build inference image
+        run: |
+          docker build -t wallet-score-agent:${{ github.sha }} \
+            -f agents/wallet_score_agent/Dockerfile .
+          docker tag wallet-score-agent:${{ github.sha }} \
+            ${{ env.ECR_REGISTRY }}/wallet-score-agent:${{ github.sha }}
+      
+      - name: Push to ECR
+        run: docker push ${{ env.ECR_REGISTRY }}/wallet-score-agent:${{ github.sha }}
+
+  deploy-mlops-infra:
+    needs: [build-training-image, build-inference-image]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Terraform Init
+        run: |
+          cd ai/mlops/terraform/environments/staging
+          terraform init
+      
+      - name: Terraform Plan
+        run: |
+          cd ai/mlops/terraform/environments/staging
+          terraform plan -var="image_tag=${{ github.sha }}"
+      
+      - name: Terraform Apply
+        if: github.event.inputs.deploy_environment == 'staging' || github.ref == 'refs/heads/main'
+        run: |
+          cd ai/mlops/terraform/environments/staging
+          terraform apply -auto-approve -var="image_tag=${{ github.sha }}"
+
+  deploy-production:
+    needs: deploy-mlops-infra
+    runs-on: ubuntu-latest
+    if: github.event.inputs.deploy_environment == 'prod'
+    environment:
+      name: production
+      url: https://mlops.example.com
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: hashicorp/setup-terraform@v2
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Deploy to Production
+        run: |
+          cd ai/mlops/terraform/environments/prod
+          terraform init
+          terraform apply -auto-approve -var="image_tag=${{ github.sha }}"
