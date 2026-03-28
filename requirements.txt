@@ -1,0 +1,30 @@
+# requirements.txt
+
+# Core Python ML/AI packages
+pandas
+numpy
+scikit-learn
+joblib
+
+# FastAPI for backend service (already part of FortiSTK backend)
+fastapi
+uvicorn
+
+# AWS SDKs for launching jobs and endpoints (needed later)
+boto3
+sagemaker
+
+# (Optional for experiments)
+matplotlib
+seaborn
+jupyterlab
+
+# (Optional for robust CLI tooling)
+click
+
+# (Optional for future distributed training)
+pytorch-lightning
+
+# (Optional for Bayesian deep learning, later)
+scipy
+pymc3  # or consider newer libraries like pyro or tensorflow-probability
